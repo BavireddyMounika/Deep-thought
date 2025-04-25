@@ -1,0 +1,25 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
+app = FastAPI(title="Container Routing Optimization API")
+
+class ContainerRoutingRequest(BaseModel):
+    cost_matrix: List[List[float]]
+
+class RoutingResult(BaseModel):
+    assignments: List[List[int]]
+    total_cost: float
+
+@app.post("/optimize", response_model=RoutingResult)
+def optimize_routing(data: ContainerRoutingRequest):
+    try:
+        cost_matrix = np.array(data.cost_matrix)
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        total_cost = cost_matrix[row_ind, col_ind].sum()
+        assignments = list(map(list, zip(row_ind.tolist(), col_ind.tolist())))
+        return RoutingResult(assignments=assignments, total_cost=total_cost)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
